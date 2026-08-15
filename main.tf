@@ -2,6 +2,12 @@ provider "aws" {
   region = "ap-south-1"
 }
 
+module "vpc" {
+  source = "./modules/vpc"
+
+  environment = "learn-terraform"
+}
+
 data "aws_ami" "ubuntu" {
   most_recent = true
 
@@ -16,13 +22,14 @@ data "aws_ami" "ubuntu" {
 resource "aws_security_group" "app_server_sg" {
   name        = "app-server-sg"
   description = "Allow SSH from my VM only"
+  vpc_id = module.vpc.vpc_id
 
   ingress {
     description = "SSH from my VM"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["27.60.40.57/32"]
+    cidr_blocks = ["27.60.44.129/32"]
   }
 
   egress {
@@ -39,14 +46,12 @@ resource "aws_security_group" "app_server_sg" {
 }
 
 resource "aws_instance" "app_server" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = var.instance_type
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = var.instance_type
+  subnet_id              = module.vpc.public_subnet_id
   vpc_security_group_ids = [aws_security_group.app_server_sg.id]
-  key_name               = aws_key_pair.app_server_key.key_name
+  key_name                = aws_key_pair.app_server_key.key_name
   tags = {
     Name = var.instance_name
   }
 }
-
-
-
